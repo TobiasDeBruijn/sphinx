@@ -43,6 +43,9 @@ class _SelectGroupViewState extends State<SelectGroupView> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text("Selecteer groep"),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Card(

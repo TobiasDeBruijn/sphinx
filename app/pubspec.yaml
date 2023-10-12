@@ -27,3 +27,4 @@ flutter:
     - assets/images/
     - assets/default_user.png
     - assets/default_group.png
+    - assets/default_product.png

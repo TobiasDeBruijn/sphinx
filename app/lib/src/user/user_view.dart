@@ -47,6 +47,7 @@ class _SelectUserViewState extends State<SelectUserView> {
 
     return Scaffold(
       appBar: AppBar(
+        title: const Text("Selecteer gebruiker"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_outlined),
@@ -62,12 +63,23 @@ class _SelectUserViewState extends State<SelectUserView> {
             children: _users.map((user) => _SelectableUser(
               user: user,
               group: widget.group,
-              onTap: _navigateToProductSelect,
+              onTap: () {
+                if(user.balance > widget.group.minimalBalance) {
+                  _navigateToProductSelect(widget.group, user);
+                } else {
+                  _openInsufficientBalanceDialog();
+                }
+              },
             )).toList(),
           ),
         ),
       ),
     );
+  }
+
+  /// Open a dialog informing the user they need to pay.
+  void _openInsufficientBalanceDialog() {
+    showDialog(context: context, builder: (_) => _InsufficientBalanceDialog());
   }
 
   void _logoutGroup() async {
@@ -100,10 +112,26 @@ class _SelectUserViewState extends State<SelectUserView> {
   }
 }
 
+class _InsufficientBalanceDialog extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Geldnood"),
+      content: const Text("Tijd om te betalen.\nBetaal bij je groepsbeheerder."),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("Ok"),
+        )
+      ],
+    );
+  }
+}
+
 class _SelectableUser extends StatelessWidget {
   final User user;
   final Group group;
-  final Function(Group g, User u) onTap;
+  final Function() onTap;
 
   const _SelectableUser({required this.user, required this.group, required this.onTap});
 
@@ -111,18 +139,35 @@ class _SelectableUser extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        onTap: () => onTap(group, user),
+        onTap: () => onTap(),
         child: Padding(
           padding: const EdgeInsets.all(4.0),
           child: Column(
             children: [
               SizedBox.square(dimension: 200, child: _getIcon()),
-              Text(user.name, textAlign: TextAlign.center)
+              Text(user.name, textAlign: TextAlign.center),
+              Text("€${user.balance.toStringAsFixed(2)}",
+                style: TextStyle(
+                  color: _getBalanceColor(user.balance),
+                )
+              ),
             ]
           ),
         ),
       ),
     );
+  }
+
+  Color? _getBalanceColor(double balance) {
+    if(balance > 0) {
+      return null;
+    }
+
+    if(balance > group.minimalBalance) {
+      return Colors.deepOrange;
+    }
+
+    return Colors.redAccent;
   }
 
   Widget _getIcon() {
