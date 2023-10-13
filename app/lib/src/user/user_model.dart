@@ -6,6 +6,12 @@ class User {
   final double balance;
 
   const User({required this.name, required this.balance, this.photo});
+
+  Future<User> updateUserBalance(double newBalance) async {
+    // TODO;
+
+    return User(name: name, balance: newBalance, photo: photo);
+  }
 }
 
 class UserApiProvider implements DataProvider<User> {

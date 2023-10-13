@@ -90,8 +90,15 @@ class _SelectProductViewState extends State<SelectProductView> {
             ShoppingCardView(
               user: widget.user,
               products: _productsInCard,
-              onTapCompletePurchase: () {
-                debugPrint("Purchase complete");
+              onTapCompletePurchase: (transactionValue) {
+                widget.user.updateUserBalance(widget.user.balance - transactionValue);
+
+                for (QuantifiedProduct element in _productsInCard) {
+                  element.product.updateStock(element.product.stock - element.quantity);
+                }
+
+                debugPrint("SelectProductView: Transaction complete");
+                Navigator.of(context).pop();
               },
               onTapProductRemove: (Product product) {
                 List<QuantifiedProduct> newCard = _productsInCard.where((element) => element.product != product).toList();
@@ -121,7 +128,7 @@ class QuantifiedProduct {
 class ShoppingCardView extends StatelessWidget {
   final User user;
   final List<QuantifiedProduct> products;
-  final Function() onTapCompletePurchase;
+  final Function(double) onTapCompletePurchase;
   final Function(Product) onTapProductRemove;
 
   const ShoppingCardView({super.key, required this.user, required this.products, required this.onTapCompletePurchase, required this.onTapProductRemove});
@@ -158,7 +165,7 @@ class ShoppingCardView extends StatelessWidget {
                       child: Text("Saldo na transactie: €${_getBalanceAfterTransaction().toStringAsFixed(2)}"),
                     ),
                     ElevatedButton(
-                      onPressed: onTapCompletePurchase,
+                      onPressed: () => onTapCompletePurchase(_getTotalPrice()),
                       child: const Text("Betalen")
                     ),
                   ],
@@ -228,7 +235,8 @@ class _ShoppingCardItem extends StatelessWidget {
               icon: const Icon(Icons.remove, color: Colors.redAccent),
             ),
             Text("${product.quantity}x "),
-            Text(product.product.name),
+            Text("${product.product.name} "),
+            product.product.quantityLiters != null ? Text("${product.product.quantityLiters}L") : const Text(""),
           ],
         ),
         const Divider(),
@@ -242,7 +250,21 @@ class CategoryView extends StatelessWidget {
   final List<Product> products;
   final Function(Product) onTapProduct;
 
-  const CategoryView({super.key, required this.products, required this.onTapProduct});
+  CategoryView({super.key, required this.products, required this.onTapProduct}) {
+    // Sort alphabetically
+    products
+        .sort((a, b) {
+          int nameComparison = a.name.compareTo(b.name);
+
+          // Products are named equally
+          if(nameComparison == 0 && a.quantityLiters != null && b.quantityLiters != null) {
+            // If the products are named the same, sort by volume
+            return a.quantityLiters!.compareTo(b.quantityLiters!);
+          } else {
+            return nameComparison;
+          }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,9 +278,67 @@ class CategoryView extends StatelessWidget {
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 5,
         ),
-        itemBuilder: (context, idx) => _SelectableProduct(product: products[idx], onTap: () => onTapProduct(products[idx]))
+        itemBuilder: (context, idx) {
+          if(products[idx].isInStock()) {
+            return _SelectableProduct(product: products[idx], onTap: () => onTapProduct(products[idx]));
+          } else {
+            return _OutOfStockProduct(product: products[idx]);
+          }
+        }
       ),
     );
+  }
+}
+
+class _OutOfStockProduct extends StatelessWidget {
+  final Product product;
+
+  const _OutOfStockProduct({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Niet op voorraad")));
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Stack(
+            children: [
+              const Text("Niet op voorraad."),
+              _ProductItem(product: product),
+              LayoutBuilder(builder: (context, size) => Icon(Icons.cancel_outlined, color: Colors.redAccent, size: size.maxWidth)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductItem extends StatelessWidget {
+  final Product product;
+
+  const _ProductItem({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        SizedBox.square(dimension: 150, child: _getIcon()),
+        Expanded(child: Text("${product.name} ${product.quantityLiters != null ? "${product.quantityLiters}L " : ""}€${product.price.toStringAsFixed(2)}")),
+      ],
+    );
+  }
+
+  Widget _getIcon() {
+    if(product.photo != null) {
+      return Image.memory(Uint8List.fromList(product.photo!));
+    } else {
+      return Image.asset("assets/default_product.png");
+    }
   }
 }
 
@@ -276,24 +356,15 @@ class _SelectableProduct extends StatelessWidget {
         onTap: () => onTap(),
         child: Padding(
           padding: const EdgeInsets.all(4.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
+          child: Stack(
             children: [
-              SizedBox.square(dimension: 150, child: _getIcon()),
-              Expanded(child: Text("${product.name} €${product.price.toStringAsFixed(2)}")),
+              Text(product.stock.toString()),
+              _ProductItem(product: product),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _getIcon() {
-    if(product.photo != null) {
-      return Image.memory(Uint8List.fromList(product.photo!));
-    } else {
-      return Image.asset("assets/default_product.png");
-    }
   }
 }
 
