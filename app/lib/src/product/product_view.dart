@@ -64,23 +64,20 @@ class _SelectProductViewState extends State<SelectProductView> {
             ProductPageView(
               products: _products,
               onTapProduct: (product) {
-                bool productAlreadyInCard = _productsInCard.any((qProduct) => qProduct.product == product);
+                if(_isProductInCard(product)) {
+                  // Item is already in the card
 
-                if(productAlreadyInCard) {
-                  // Replace the item in the card with a new one with an increased quantity.
-                  List<QuantifiedProduct> newCard = _productsInCard
-                    .map((qProduct) {
-                      if(qProduct.product == product) {
-                        return QuantifiedProduct(qProduct.product, qProduct.quantity + 1);
-                      } else {
-                        return qProduct;
-                      }
-                    }).toList();
+                  // Check if there's enough stock
+                  int oldQuantity = _productsInCard.firstWhere((element) => element.product == product).quantity;
+                  if(oldQuantity >= product.stock) {
+                    _showOutOfStockWarning(context);
+                    return;
+                  }
 
-                  setState(() {
-                    _productsInCard = newCard;
-                  });
+                  _increaseProductQuantity(product);
                 } else {
+                  // Item is not in the card yet
+
                   setState(() {
                     _productsInCard.add(QuantifiedProduct(product, 1));
                   });
@@ -111,6 +108,41 @@ class _SelectProductViewState extends State<SelectProductView> {
         )
       ),
     );
+  }
+
+  bool _isProductInCard(Product product) => _productsInCard.any((qProduct) => qProduct.product == product);
+
+  void _increaseProductQuantity(Product product) {
+    // Replace the item in the card with a new one with an increased quantity.
+    List<QuantifiedProduct> newCard = _productsInCard
+        .map((qProduct) {
+      if(qProduct.product == product) {
+        return QuantifiedProduct(qProduct.product, qProduct.quantity + 1);
+      } else {
+        return qProduct;
+      }
+    }).toList();
+
+    setState(() {
+      _productsInCard = newCard;
+    });
+  }
+
+  void _showOutOfStockWarning(BuildContext context) {
+    // Show a banner for a few seconds
+    ScaffoldMessenger.of(context).clearMaterialBanners();
+    final controller = ScaffoldMessenger.of(context).showMaterialBanner(MaterialBanner(
+      content: const Text("Je kunt niet meer van dit product toevoegen", style: TextStyle(color: Colors.white)),
+      actions: [
+        IconButton(
+            onPressed: () => ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
+            icon: const Icon(Icons.close, color: Colors.white)
+        )
+      ],
+      backgroundColor: Colors.redAccent,
+    ));
+
+    Timer(const Duration(seconds: 3), () => controller.close());
   }
 }
 
@@ -299,9 +331,7 @@ class _OutOfStockProduct extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Niet op voorraad")));
-        },
+        onTap: () => _showOutOfStockWarning(context),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Stack(
@@ -314,6 +344,23 @@ class _OutOfStockProduct extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showOutOfStockWarning(BuildContext context) {
+    // Show a banner for a few seconds
+    ScaffoldMessenger.of(context).clearMaterialBanners();
+    final controller = ScaffoldMessenger.of(context).showMaterialBanner(MaterialBanner(
+      content: const Text("Dit product is niet op voorraad", style: TextStyle(color: Colors.white)),
+      actions: [
+        IconButton(
+            onPressed: () => ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
+            icon: const Icon(Icons.close, color: Colors.white)
+        )
+      ],
+      backgroundColor: Colors.redAccent,
+    ));
+
+    Timer(const Duration(seconds: 3), () => controller.close());
   }
 }
 
