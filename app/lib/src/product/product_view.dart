@@ -6,6 +6,7 @@ import 'package:app/src/group/group_model.dart';
 import 'package:app/src/product/product_model.dart';
 import 'package:app/src/user/user_model.dart';
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
 
 class SelectProductView extends StatefulWidget {
   final Group group;
@@ -19,8 +20,11 @@ class SelectProductView extends StatefulWidget {
 
 class _SelectProductViewState extends State<SelectProductView> {
 
+  /// All available products
   List<Product> _products = [];
+  /// Products currently in the shopping card
   List<QuantifiedProduct> _productsInCard = [];
+  /// Waiting on the products to be loaded
   bool _isLoading = true;
 
   @override
@@ -62,19 +66,20 @@ class _SelectProductViewState extends State<SelectProductView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             ProductPageView(
-              products: _products,
+              products: _reduceStockWithShoppingCard(),
               onTapProduct: (product) {
                 if(_isProductInCard(product)) {
                   // Item is already in the card
 
                   // Check if there's enough stock
-                  int oldQuantity = _productsInCard.firstWhere((element) => element.product == product).quantity;
+                  int oldQuantity = _productsInCard.firstWhere((element) => element.product.id == product.id).quantity;
                   if(oldQuantity >= product.stock) {
                     _showOutOfStockWarning(context);
                     return;
                   }
 
-                  _increaseProductQuantity(product);
+                  // Add the item to the card
+                  _increaseProductQuantityInCard(product);
                 } else {
                   // Item is not in the card yet
 
@@ -90,15 +95,19 @@ class _SelectProductViewState extends State<SelectProductView> {
               onTapCompletePurchase: (transactionValue) {
                 widget.user.updateUserBalance(widget.user.balance - transactionValue);
 
+                // Update the stock for each product
                 for (QuantifiedProduct element in _productsInCard) {
                   element.product.updateStock(element.product.stock - element.quantity);
                 }
 
                 debugPrint("SelectProductView: Transaction complete");
+
+                // Return to the user view.
                 Navigator.of(context).pop();
               },
               onTapProductRemove: (Product product) {
-                List<QuantifiedProduct> newCard = _productsInCard.where((element) => element.product != product).toList();
+                // Remove the item from the shopping card
+                List<QuantifiedProduct> newCard = _productsInCard.where((element) => element.product.id != product.id).toList();
                 setState(() {
                   _productsInCard = newCard;
                 });
@@ -110,13 +119,27 @@ class _SelectProductViewState extends State<SelectProductView> {
     );
   }
 
-  bool _isProductInCard(Product product) => _productsInCard.any((qProduct) => qProduct.product == product);
+  /// Return a list of Products with their stocks adjusted for what is currently in the user's shopping card
+  List<ProductWithChangedStock> _reduceStockWithShoppingCard() {
+    return _products.map((e) {
+      // Find the associated product in the shopping card
+      QuantifiedProduct? shoppingCardItem = _productsInCard.firstWhereOrNull((element) => element.product.id == e.id);
+      int quantityDifference = shoppingCardItem?.quantity ?? 0;
 
-  void _increaseProductQuantity(Product product) {
+      // Return the product with the stock changed by subtracting the amount in the card, if applicable.
+      return e.withChangedStock(e.stock - quantityDifference);
+    }).toList();
+  }
+
+  /// Check if a product is in the card
+  bool _isProductInCard(Product product) => _productsInCard.any((qProduct) => qProduct.product.id == product.id);
+
+  /// Increase the quantity of a product in the shopping card
+  void _increaseProductQuantityInCard(Product product) {
     // Replace the item in the card with a new one with an increased quantity.
     List<QuantifiedProduct> newCard = _productsInCard
         .map((qProduct) {
-      if(qProduct.product == product) {
+      if(qProduct.product.id == product.id) {
         return QuantifiedProduct(qProduct.product, qProduct.quantity + 1);
       } else {
         return qProduct;
@@ -142,8 +165,20 @@ class _SelectProductViewState extends State<SelectProductView> {
       backgroundColor: Colors.redAccent,
     ));
 
-    Timer(const Duration(seconds: 3), () => controller.close());
+    Timer(const Duration(seconds: 3), () async {
+      if(context.mounted) {
+        controller.close();
+      }
+    });
   }
+}
+
+/// A product with a stock that is shown differently to the user than what is actually in stock.
+class ProductWithChangedStock extends Product {
+  /// The stock to be shown to the user
+  final int viewStock;
+
+  const ProductWithChangedStock({required super.id, required super.name, required super.price, required super.category, required super.stock, required this.viewStock});
 }
 
 /// A product with a quantity
@@ -279,7 +314,7 @@ class _ShoppingCardItem extends StatelessWidget {
 
 /// Shows all products in a certain category as a grid.
 class CategoryView extends StatelessWidget {
-  final List<Product> products;
+  final List<ProductWithChangedStock> products;
   final Function(Product) onTapProduct;
 
   CategoryView({super.key, required this.products, required this.onTapProduct}) {
@@ -336,7 +371,6 @@ class _OutOfStockProduct extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           child: Stack(
             children: [
-              const Text("Niet op voorraad."),
               _ProductItem(product: product),
               LayoutBuilder(builder: (context, size) => Icon(Icons.cancel_outlined, color: Colors.redAccent, size: size.maxWidth)),
             ],
@@ -391,7 +425,7 @@ class _ProductItem extends StatelessWidget {
 
 /// A product displayed as a clickable card with an icon, name and price.
 class _SelectableProduct extends StatelessWidget {
-  final Product product;
+  final ProductWithChangedStock product;
   final Function() onTap;
 
   const _SelectableProduct({required this.product, required this.onTap});
@@ -405,7 +439,7 @@ class _SelectableProduct extends StatelessWidget {
           padding: const EdgeInsets.all(4.0),
           child: Stack(
             children: [
-              Text(product.stock.toString()),
+              Text(product.viewStock.toString()),
               _ProductItem(product: product),
             ],
           ),
@@ -417,7 +451,7 @@ class _SelectableProduct extends StatelessWidget {
 
 /// Shows all products, sorted on pages by the product's category.
 class ProductPageView extends StatefulWidget {
-  final List<Product> products;
+  final List<ProductWithChangedStock> products;
   final Function(Product) onTapProduct;
 
   const ProductPageView({super.key, required this.products, required this.onTapProduct});
