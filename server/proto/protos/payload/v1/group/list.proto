@@ -1,0 +1,8 @@
+syntax = "proto3";
+package dev.array21.sphinx;
+
+import "entity/group.proto";
+
+message ListGroupsResponse {
+  repeated GroupEntity groups = 1;
+}

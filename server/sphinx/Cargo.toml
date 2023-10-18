@@ -1,0 +1,21 @@
+[package]
+name = "sphinx"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-cors = "0.6.4"
+actix-multiresponse = "0.4.2"
+actix-web = "4.4.0"
+dal = { version = "0.1.0", path = "../dal" }
+proto = { version = "0.1.0", path = "../proto" }
+tracing = "0.1.39"
+tracing-actix-web = "0.7.7"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+color-eyre = "0.6.2"
+tokio = { version = "1.33.0", features = ["full"] }
+thiserror = "1.0.49"
+serde = { version = "1.0.189", features = ["derive"] }
+proto_convert = { path = "../proto_convert" }
