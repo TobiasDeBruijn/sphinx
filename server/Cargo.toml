@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+	"dal",
+	"proto",
+	"sphinx",
+	"proto_convert"
+]

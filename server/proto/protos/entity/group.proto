@@ -1,0 +1,10 @@
+syntax = "proto3";
+package dev.array21.sphinx;
+
+message GroupEntity {
+  uint32 id = 1;
+  string name = 2;
+  bytes photo = 3;
+  bytes pinCode = 4;
+  double minimalBalance = 5;
+}
