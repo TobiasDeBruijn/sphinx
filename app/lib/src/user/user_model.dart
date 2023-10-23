@@ -2,15 +2,16 @@ import 'package:app/src/api/provider.dart';
 
 class User {
   final String name;
+  final int id;
   final List<int>? photo;
   final double balance;
 
-  const User({required this.name, required this.balance, this.photo});
+  const User({required this.id, required this.name, required this.balance, this.photo});
 
   Future<User> updateUserBalance(double newBalance) async {
     // TODO;
 
-    return User(name: name, balance: newBalance, photo: photo);
+    return User(id: id, name: name, balance: newBalance, photo: photo);
   }
 }
 
@@ -28,9 +29,9 @@ class UserApiProvider implements DataProvider<User> {
     }
 
     return [
-      const User(name: "Tobias", balance: 10.00),
-      const User(name: "Bas", balance: 30.00),
-      const User(name: "Jef", balance: -10.40),
+      const User(id: 1, name: "Tobias", balance: 10.00),
+      const User(id: 2, name: "Bas", balance: 30.00),
+      const User(id: 3, name: "Jef", balance: -10.40),
     ];
   }
 }

@@ -33,7 +33,7 @@ impl<'a> FromWithDatabase<'a, _Group> for Group<'a> {
 }
 
 impl<'a> Group<'a> {
-    pub async fn new(database: &'a Database, name: String, pin_code: Vec<u8>) -> DatabaseResult<Self> {
+    pub async fn new(database: &'a Database, name: String, pin_code: Vec<u8>) -> DatabaseResult<Group<'a>> {
         let mut tx = database.begin().await?;
         let id = sqlx::query("INSERT INTO groups (name, pin_code, minimal_balance) VALUES (?, ?, -10.0)")
             .bind(&name)
@@ -52,7 +52,7 @@ impl<'a> Group<'a> {
         })
     }
 
-    pub async fn get(database: &'a Database, id: u32) -> DatabaseResult<Option<Self>> {
+    pub async fn get(database: &'a Database, id: u32) -> DatabaseResult<Option<Group<'a>>> {
         let group: Option<_Group> = sqlx::query_as("SELECT * FROM groups WHERE id = ?")
             .bind(id)
             .fetch_optional(&**database)
@@ -60,7 +60,7 @@ impl<'a> Group<'a> {
         Ok(group.map(|g| Group::from_with_database(g, database)))
     }
 
-    pub async fn list(database: &'a Database) -> DatabaseResult<Vec<Self>> {
+    pub async fn list(database: &'a Database) -> DatabaseResult<Vec<Group<'a>>> {
         let groups: Vec<_Group> = sqlx::query_as("SELECT * FROM groups")
             .fetch_all(&**database)
             .await?;

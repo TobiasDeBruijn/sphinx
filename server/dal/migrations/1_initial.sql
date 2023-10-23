@@ -1,0 +1,31 @@
+CREATE TABLE `groups` (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(64) NOT NULL,
+    photo BLOB DEFAULT NULL,
+    pin_code BLOB NOT NULL,
+    minimal_balance DOUBLE NOT NULL DEFAULT -10.0,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE `users` (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(64) NOT NULL,
+    photo BLOB DEFAULT NULL,
+    balance DOUBLE NOT NULL DEFAULT 0.00,
+    group_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (group_id) REFERENCES `groups`(id)
+);
+
+CREATE TABLE `products` (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(64) NOT NULL,
+    quantity_liters DOUBLE DEFAULT NULL,
+    stock INT UNSIGNED NOT NULL DEFAULT 0,
+    photo BLOB DEFAULT NULL,
+    price DOUBLE NOT NULL,
+    category VARCHAR(64) NOT NULL,
+    group_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (group_id) REFERENCES `groups`(id)
+);
